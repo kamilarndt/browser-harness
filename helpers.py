@@ -119,7 +119,13 @@ def start_remote_daemon(name="remote", **create_kwargs):
 
 
 # --- navigation / page ---
-def goto(url):  return cdp("Page.navigate", url=url)
+def goto(url):
+    """Navigate, auto-clearing beforeunload handlers to prevent blocking dialogs."""
+    try:
+        js("window.onbeforeunload=null")
+    except Exception:
+        pass
+    return cdp("Page.navigate", url=url)
 
 def page_info():
     """{url, title, w, h, sx, sy, pw, ph} — viewport + scroll + page size."""
@@ -246,13 +252,21 @@ def upload_file(selector, path):
     cdp("DOM.setFileInputFiles", files=[path] if isinstance(path, str) else list(path), nodeId=nid)
 
 
-def capture_dialogs():
-    """Stub window.alert/confirm/prompt so messages stash in window.__dialogs__. Call BEFORE the action that triggers the dialog; read with dialogs()."""
-    js("window.__dialogs__=[];window.alert=m=>window.__dialogs__.push(String(m));window.confirm=m=>{window.__dialogs__.push(String(m));return true;};window.prompt=(m,d)=>{window.__dialogs__.push(String(m));return d||'';}")
+def dismiss_dialog(accept=True):
+    """Dismiss a native browser dialog (alert/confirm/prompt/beforeunload) via CDP.
+    Works even when the JS thread is frozen. Returns the dialog message, or None if no dialog."""
+    events = drain_events()
+    msg = None
+    for e in events:
+        if e.get("method") == "Page.javascriptDialogOpening":
+            msg = e.get("params", {}).get("message", "")
+    try:
+        cdp("Page.handleJavaScriptDialog", accept=accept)
+    except Exception:
+        pass
+    return msg
 
-def dialogs():
-    """Return list of captured dialog messages since last capture_dialogs()."""
-    return json.loads(js("JSON.stringify(window.__dialogs__||[])") or "[]")
+
 
 
 def http_get(url, headers=None, timeout=20.0):
