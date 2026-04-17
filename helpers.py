@@ -147,13 +147,19 @@ _KEYS = {  # key → (windowsVirtualKeyCode, code, text)
 }
 def press_key(key, modifiers=0):
     """Modifiers bitfield: 1=Alt, 2=Ctrl, 4=Meta(Cmd), 8=Shift.
-    Special keys (Enter, Tab, Arrow*, Backspace, etc.) carry their virtual key codes
-    so listeners checking e.keyCode / e.key all fire."""
+    Printable chars send rawKeyDown + char (single insertion); control keys (Enter, Tab,
+    Arrow*, Backspace, etc.) send keyDown + keyUp carrying their virtual key codes so
+    listeners checking e.keyCode / e.key all fire."""
     vk, code, text = _KEYS.get(key, (ord(key[0]) if len(key) == 1 else 0, key, key if len(key) == 1 else ""))
     base = {"key": key, "code": code, "modifiers": modifiers, "windowsVirtualKeyCode": vk, "nativeVirtualKeyCode": vk}
-    cdp("Input.dispatchKeyEvent", type="keyDown", **base, **({"text": text} if text else {}))
-    if text and len(text) == 1:
-        cdp("Input.dispatchKeyEvent", type="char", text=text, **{k: v for k, v in base.items() if k != "text"})
+    if text and len(text) == 1 and key not in _KEYS:
+        # Printable character: rawKeyDown (no text) + char (with text) → one insertion.
+        # Previously sent keyDown with text AND char with text, which double-inserted.
+        cdp("Input.dispatchKeyEvent", type="rawKeyDown", **base)
+        cdp("Input.dispatchKeyEvent", type="char", text=text, **base)
+    else:
+        # Control key (Enter, Tab, arrows, etc.): keyDown carries text if it has one.
+        cdp("Input.dispatchKeyEvent", type="keyDown", **base, **({"text": text} if text else {}))
     cdp("Input.dispatchKeyEvent", type="keyUp", **base)
 
 def scroll(x, y, dy=-300, dx=0):
