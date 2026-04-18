@@ -47,7 +47,10 @@ def drain_events():  return _send({"meta": "drain_events"})["events"]
 
 
 # --- navigation / page ---
-def goto(url):  return cdp("Page.navigate", url=url)
+def goto(url):
+    r = cdp("Page.navigate", url=url)
+    d = (Path(__file__).parent / "domain-skills" / (urlparse(url).hostname or "").removeprefix("www.").split(".")[0])
+    return {**r, "domain_skills": sorted(p.name for p in d.rglob("*.md"))[:10]} if d.is_dir() else r
 
 def page_info():
     """{url, title, w, h, sx, sy, pw, ph} — viewport + scroll + page size."""
@@ -55,40 +58,6 @@ def page_info():
             expression="JSON.stringify({url:location.href,title:document.title,w:innerWidth,h:innerHeight,sx:scrollX,sy:scrollY,pw:document.documentElement.scrollWidth,ph:document.documentElement.scrollHeight})",
             returnByValue=True)
     return json.loads(r["result"]["value"])
-
-
-def _domain_skill_candidates(hostname):
-    host = (hostname or "").lower().strip(".")
-    if not host:
-        return []
-    parts = [p for p in host.split(".") if p and p != "www"]
-    if not parts:
-        return []
-    seen, out = set(), []
-    for i in range(len(parts) - 1):
-        candidate = ".".join(parts[i:])
-        if candidate not in seen:
-            seen.add(candidate)
-            out.append(candidate)
-    leaf = parts[0]
-    if leaf not in seen:
-        out.append(leaf)
-    return out
-
-
-def domain_skill_names(url=None, limit=10):
-    """Return up to `limit` Markdown filenames for the current page's matching domain skill directory."""
-    target = url or page_info().get("url", "")
-    host = urlparse(target).hostname
-    root = Path(__file__).parent / "domain-skills"
-    for candidate in _domain_skill_candidates(host):
-        folder = root / candidate
-        if not folder.is_dir():
-            continue
-        files = sorted(p.name for p in folder.rglob("*.md") if p.is_file())
-        return files[:limit]
-    return []
-
 
 # --- input ---
 def click(x, y, button="left", clicks=1):
