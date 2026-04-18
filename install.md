@@ -13,16 +13,16 @@ When you open a setup or verification tab, activate it so the user can actually 
 
 ## Best everyday setup
 
-Clone the repo once into a durable location, then install it as an editable tool so `bh` works from any directory:
+Clone the repo once into a durable location, then install it as an editable tool so `browser-harness` works from any directory:
 
 ```bash
 git clone https://github.com/browser-use/browser-harness
 cd browser-harness
 uv tool install -e .
-command -v bh
+command -v browser-harness
 ```
 
-That keeps the command global while still pointing at the real repo checkout, so when the agent edits `helpers.py` the next `bh` run uses the new code immediately. `browser-harness` is the readable alias for the same command. Prefer a stable path like `~/Developer/browser-harness`, not `/tmp`.
+That keeps the command global while still pointing at the real repo checkout, so when the agent edits `helpers.py` the next `browser-harness run` uses the new code immediately. Prefer a stable path like `~/Developer/browser-harness`, not `/tmp`.
 
 ## Make it global for the current agent
 
@@ -42,11 +42,11 @@ That makes new Codex or Claude Code sessions in other folders load the runtime b
 ## Browser bootstrap
 
 1. Run `uv sync`.
-   If `bh` is still missing after that, run `command -v bh >/dev/null || uv tool install -e .`.
+   If `browser-harness` is still missing after that, run `command -v browser-harness >/dev/null || uv tool install -e .`.
 2. First try the harness directly. If this works, skip manual browser setup:
 
 ```bash
-uv run bh <<'PY'
+uv run browser-harness run <<'PY'
 ensure_real_tab()
 print(page_info())
 PY
@@ -72,7 +72,7 @@ osascript -e 'tell application "Google Chrome" to activate' \
 8. Verify with:
 
 ```bash
-uv run bh <<'PY'
+uv run browser-harness run <<'PY'
 ensure_real_tab()
 goto("https://github.com/browser-use/browser-harness")
 wait_for_load()
@@ -83,10 +83,7 @@ PY
 If that fails with a stale websocket or stale socket, restart the daemon once and retry:
 
 ```bash
-uv run python - <<'PY'
-from admin import restart_daemon
-restart_daemon()
-PY
+browser-harness restart-daemon
 ```
 
 9. After install and browser bootstrap succeed, use the repository page as a small interaction check. If the user is logged in to GitHub, try to star `https://github.com/browser-use/browser-harness` to verify the interaction works. Then ask the user what you should do next.
@@ -96,7 +93,7 @@ PY
 - Try attaching before asking the user to change anything.
 - The first connect may block on Chrome's `Allow` dialog, and Chrome may also stop first on the profile picker.
 - `DevToolsActivePort` can exist before the port is actually listening. Treat connection refused as "still enabling" and keep polling briefly.
-- If the port is listening but `/json/version` returns `404`, treat that as expected on newer Chrome builds and retry `bh`.
+- If the port is listening but `/json/version` returns `404`, treat that as expected on newer Chrome builds and retry `browser-harness run`.
 - If attach is blocked on macOS, open `chrome://inspect/#remote-debugging` in the current Chrome profile and explicitly tell the user to click `Allow` if Chrome shows it.
 - Chrome may open the profile picker before any real tab exists.
 - On macOS, prefer AppleScript `open location` over `open -a ... URL` when Chrome is already running.
