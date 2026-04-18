@@ -18,7 +18,7 @@ The agent writes what's missing, mid-task. No framework, no recipes, no rails. O
 
 **You will never use the browser again.**
 
-## Setup
+## Setup prompt
 
 Paste into Claude Code or Codex:
 
