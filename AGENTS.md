@@ -13,10 +13,12 @@ Core code lives in `src/browser_harness/`:
 - `helpers.py` — CDP wrapper and core browser primitives auto-imported into `-c` scripts
 - `run.py` — the `browser-harness` CLI
 
-`SKILL.md` tells agents how to use the harness.
+`SKILL.md` tells agents how to use the harness and CLI.
 `install.md` tells agents how to install it, attach a browser, and troubleshoot.
 
-An agent operating the harness only edits inside `agent-workspace/`, where it can add new helper functions and write or read skills.
+An agent operating the harness only edits inside `agent-workspace/`:
+- `agent_helpers.py` — task-specific browser helpers the agent adds
+- `domain-skills/` — skills the agent writes and reads
 
 # Contributing
 Consider what is really needed. Prefer the smallest diff that fixes the bug.
